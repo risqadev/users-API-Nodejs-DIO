@@ -1,0 +1,17 @@
+{
+  "name": "dio-explorando-rest-com-nodejs",
+  "version": "0.1.0",
+  "description": "Curso \"Explorando o estilo arquitetural REST com Node.js\" da DIO",
+  "main": "./dist/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "node ./",
+    "build": "tsc -p ."
+  },
+  "author": "Ricardo Camacho",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^16.11.12",
+    "typescript": "^4.5.2"
+  }
+}
