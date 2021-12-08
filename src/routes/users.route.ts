@@ -1,4 +1,4 @@
-import { NextFunction, Request, Response, Router, json } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import { v4 as uuidv4, validate } from 'uuid';
 import { StatusCodes } from 'http-status-codes';
 
@@ -6,57 +6,66 @@ interface IUser {
   id: string;
   name: string;
   username: string;
-  email: string;
-  password: string
+  email: string
 }
-
-const { OK, CREATED, BAD_REQUEST, NOT_FOUND, NO_CONTENT } = StatusCodes;
 
 const users: IUser[] = [
   {
     id: uuidv4(),
     name: 'Ricardo',
     username: 'rscamacho',
-    email: 'rscamachodev@gmail.com',
-    password: '123456'
+    email: 'rscamachodev@gmail.com'
   },
   {
     id: uuidv4(),
     name: 'Jacinto',
     username: 'jacintinhopazeamor',
-    email: 'jac-into@gmail.com',
-    password: '12345678'
+    email: 'jac-into@gmail.com'
   },
 ];
 
 const usersRoute = Router();
+const { OK, CREATED, BAD_REQUEST, NOT_FOUND, NO_CONTENT } = StatusCodes;
 
-usersRoute.get('/users', (request: Request, response: Response) => {
+// middlewares
+function findUserById(request: Request, response: Response, next: NextFunction) {
   const { id } = request.headers;
 
   if (!id) {
-    return response.status(OK).json(users);
+    request.user = undefined;
+    return next();
   }
-
   if (!validate(String(id))) {
-    return response.status(BAD_REQUEST).json({
-      error: 'Invalid ID.'
-    });
+    return response.status(BAD_REQUEST).json({ error: 'Invalid ID.' });
   }
 
-  const user = users.find(user => user.id === id);
+  const index = users.findIndex(user => user.id === id);
+
+  if (index > -1) {
+    request.user = { index, data: users[index] };
+  } else {
+    request.user = { index, data: undefined };
+  }
+
+  return next();
+}
+
+usersRoute.get('/users', findUserById, (request: Request, response: Response) => {
+  const { user } = request;
 
   if (!user) {
-    return response.status(NOT_FOUND).json({ error: 'User id not found.' });
+    return response.status(OK).json(users);
+  } else if (!user.data) {
+    return response.status(NOT_FOUND).json({ error: 'User ID not  found.' });
+  } else if (!!user.data) {
+    return response.status(OK).json(user.data);
   }
-
-  return response.status(OK).json(user);
 });
 
 usersRoute.post('/users', (request: Request, response: Response) => {
-  const { name, username, email, password } = request.body;
+  const { name, username, email } = request.body;
 
-  if (!name || !username || !email || !password) {
+  if (!name || !username || !email) {
     return response.status(BAD_REQUEST).json({
       error: 'Some field is missing.'
     });
@@ -66,8 +75,7 @@ usersRoute.post('/users', (request: Request, response: Response) => {
     id: uuidv4(),
     name,
     username,
-    email,
-    password
+    email
   }
 
   users.push(user);
@@ -75,57 +83,40 @@ usersRoute.post('/users', (request: Request, response: Response) => {
   return response.status(CREATED).json(user);
 });
 
-usersRoute.put('/users', (request: Request, response: Response) => {
-  const { id } = request.headers;
+usersRoute.put('/users', findUserById, (request: Request, response: Response) => {
+  const { user } = request;
 
-  if (!validate(String(id))) {
-    return response.status(BAD_REQUEST).json({
-      error: 'Invalid ID.'
-    });
+  if (!user) {
+    return response.status(BAD_REQUEST).json({ error: 'Enter user ID.' });
+  } else if (!user.data) {
+    return response.status(NOT_FOUND).json({ error: 'User ID not  found.' });
   }
 
-  const { name, username, email, password } = request.body;
+  const { name, username, email } = request.body;
 
-  if (!name && !username && !email && !password) {
+  if (!name && !username && !email) {
     return response.status(BAD_REQUEST).json({
       error: 'No fields entered.'
     });
   }
 
-  const user = users.find(user => user.id === id);
-
-  if (!user) {
-    return response.status(NOT_FOUND).json({
-      error: 'User ID not found.'
-    });
-  }
-
-  !!name && (user.name = name);
-  !!username && (user.username = username);
-  !!email && (user.email = email);
-  !!password && (user.password = password);
+  !!name && (user.data.name = name);
+  !!username && (user.data.username = username);
+  !!email && (user.data.email = email);
 
   return response.status(OK).json(user);
 });
 
-usersRoute.delete('/users', (request: Request, response: Response) => {
-  const { id } = request.headers;
+usersRoute.delete('/users', findUserById, (request: Request, response: Response) => {
+  const { user } = request;
 
-  if (!validate(String(id))) {
-    return response.status(BAD_REQUEST).json({
-      error: 'Invalid ID.'
-    });
+  if (!user) {
+    return response.status(BAD_REQUEST).json({ error: 'Enter user ID.' });
+  } else if (!user.data) {
+    return response.status(NOT_FOUND).json({ error: 'User ID not  found.' });
   }
 
-  const userIndex = users.findIndex(user => user.id === id);
-
-  if (userIndex < 0) {
-    return response.status(NOT_FOUND).json({
-      error: 'User ID not found.'
-    });
-  }
-
-  users.splice(userIndex, 1);
+  users.splice(user.index, 1);
 
   return response.sendStatus(NO_CONTENT);
 });
