@@ -2,27 +2,7 @@ import { NextFunction, Request, Response, Router } from 'express';
 import { v4 as uuidv4, validate } from 'uuid';
 import { StatusCodes } from 'http-status-codes';
 
-interface IUser {
-  id: string;
-  name: string;
-  username: string;
-  email: string
-}
-
-const users: IUser[] = [
-  {
-    id: uuidv4(),
-    name: 'Ricardo',
-    username: 'rscamacho',
-    email: 'rscamachodev@gmail.com'
-  },
-  {
-    id: uuidv4(),
-    name: 'Jacinto',
-    username: 'jacintinhopazeamor',
-    email: 'jac-into@gmail.com'
-  },
-];
+const users: IUser[] = [];
 
 const usersRoute = Router();
 const { OK, CREATED, BAD_REQUEST, NOT_FOUND, NO_CONTENT } = StatusCodes;
