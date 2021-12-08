@@ -1,7 +1,7 @@
 {
-  "name": "dio-explorando-rest-com-nodejs",
+  "name": "users-api-nodejs-dio",
   "version": "0.1.0",
-  "description": "Curso \"Explorando o estilo arquitetural REST com Node.js\" da DIO",
+  "description": "API de usuários",
   "author": "Ricardo Camacho",
   "license": "MIT",
   "main": "./dist/index.js",
