@@ -4,7 +4,7 @@ import { StatusCodes } from 'http-status-codes';
 
 const { OK, CREATED, BAD_REQUEST, NOT_FOUND, NO_CONTENT } = StatusCodes;
 
-const users: IUser[] = [
+const users: User[] = [
   {
     id: "6c555d5b-f1e7-4312-beb3-3a802721df4b",
     name: "Ricardo",
@@ -68,7 +68,7 @@ export function createUserController(request: Request, response: Response) {
     });
   }
 
-  const user: IUser = {
+  const user: User = {
     id: uuidv4(),
     name,
     username,
