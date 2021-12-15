@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { v4 as uuidv4, validate } from 'uuid';
 import { StatusCodes } from 'http-status-codes';
+import userRepository from '../repositories/user.repository';
 
 const { OK, CREATED, BAD_REQUEST, NOT_FOUND, NO_CONTENT } = StatusCodes;
 
@@ -53,67 +54,93 @@ export function getUsersController(request: Request, response: Response) {
   if (!user) {
     return response.status(OK).json(users);
   } else if (!user.data) {
-    return response.status(NOT_FOUND).json({ error: 'User ID not  found.' });
+    return response.status(NOT_FOUND).json({ error: 'User ID not found.' });
   } else if (!!user.data) {
     return response.status(OK).json(user.data);
   }
 }
 
-export function createUserController(request: Request, response: Response) {
-  const { name, username, email } = request.body;
+export async function createUserController(request: Request, response: Response) {
+  const { name, username, email, password } = request.body;
 
-  if (!name || !username || !email) {
+  if (!name || !username || !email || !password) {
     return response.status(BAD_REQUEST).json({
       error: 'Some field is missing.'
     });
   }
 
   const user: User = {
-    id: uuidv4(),
     name,
     username,
-    email
+    email,
+    password
   }
 
-  users.push(user);
+  const id = await userRepository.create(user);
 
-  return response.status(CREATED).json(user);
+  return response.status(CREATED).json({ id });
 }
 
-export function updateUserController(request: Request, response: Response) {
-  const { user } = request;
+export async function updateUserController(request: Request, response: Response) {
+  const id = String(request.headers.id);
 
-  if (!user) {
+  if (!id) {
     return response.status(BAD_REQUEST).json({ error: 'Enter user ID.' });
-  } else if (!user.data) {
-    return response.status(NOT_FOUND).json({ error: 'User ID not  found.' });
+  }
+  if (!validate(String(id))) {
+    return response.status(BAD_REQUEST).json({ error: 'Invalid ID.' });
   }
 
-  const { name, username, email } = request.body;
+  const user: { name?: string; username?: string; email?: string; password?: string } = request.body;
+  const { name, username, email, password } = user;
 
-  if (!name && !username && !email) {
+  if (!name && !username && !email && !password) {
     return response.status(BAD_REQUEST).json({
       error: 'No fields entered.'
     });
   }
 
-  !!name && (user.data.name = name);
-  !!username && (user.data.username = username);
-  !!email && (user.data.email = email);
+  const userData = {
+    id,
+    ...!!name && ({ name }),
+    ...!!username && ({ username }),
+    ...!!email && ({ email }),
+    ...!!password && ({ password })
+  };
 
-  return response.status(OK).json(user.data);
-}
+  const rowsCount = await userRepository.update(userData);
 
-export function deleteUserController(request: Request, response: Response) {
-  const { user } = request;
-
-  if (!user) {
-    return response.status(BAD_REQUEST).json({ error: 'Enter user ID.' });
-  } else if (!user.data) {
-    return response.status(NOT_FOUND).json({ error: 'User ID not  found.' });
+  if (rowsCount < 1) {
+    return response.status(BAD_REQUEST).json({
+      error: 'No rows affected in DB.'
+    });
   }
 
-  users.splice(user.index, 1);
+  return response.sendStatus(NO_CONTENT);
+}
+
+export async function deleteUserController(request: Request, response: Response) {
+  const id = String(request.headers.id);
+
+  if (!id) {
+    return response.status(BAD_REQUEST).json({ error: 'Enter user ID.' });
+  }
+  if (!validate(String(id))) {
+    return response.status(BAD_REQUEST).json({ error: 'Invalid ID.' });
+  }
+
+  const rowsCount = await userRepository.delete(id);
+
+  if (rowsCount < 1) {
+    return response.status(BAD_REQUEST).json({
+      error: 'No rows affected in DB.'
+    });
+  }
+  if (rowsCount > 1) {
+    return response.status(BAD_REQUEST).json({
+      error: 'Something feels wrong. Multiple lines were affected by the operation.'
+    });
+  }
 
   return response.sendStatus(NO_CONTENT);
 }
