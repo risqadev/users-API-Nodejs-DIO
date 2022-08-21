@@ -1,33 +1,17 @@
-import { Request, Response, Router } from 'express';
-import { validate } from 'uuid';
-import { createUserController, deleteUserController, findUserById, getUsersController, updateUserController } from '../controllers/user.controllers';
-import userRepository from '../repositories/user.repository';
-import { StatusCodes } from 'http-status-codes';
-
-const { OK, CREATED, BAD_REQUEST, NOT_FOUND, NO_CONTENT } = StatusCodes;
+import { Router } from 'express';
+import { createUserController, deleteUserController, getAllUsersController, getUserByIdController, updateUserController } from '../controllers/user.controllers';
 
 
 const usersRoute = Router();
 
-// usersRoute.get('/users', findUserById, getUsersController);
-usersRoute.get('/users', async (request: Request, response: Response) => {
-  const id = String(request.headers.id);
+usersRoute.get('/users', getAllUsersController);
 
-  const user = await userRepository.findById(id);
-
-  return response.status(OK).json(user);
-});
-
-usersRoute.get('/allusers', async (request: Request, response: Response) => {
-  const users = await userRepository.findAllUsers();
-
-  return response.status(200).json(users);
-});
+usersRoute.get('/users/:id', getUserByIdController);
 
 usersRoute.post('/users', createUserController);
 
-usersRoute.put('/users', updateUserController);
+usersRoute.put('/users/:id', updateUserController);
 
-usersRoute.delete('/users', deleteUserController);
+usersRoute.delete('/users/:id', deleteUserController);
 
 export default usersRoute;

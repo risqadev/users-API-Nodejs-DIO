@@ -1,146 +1,103 @@
 import { NextFunction, Request, Response } from 'express';
-import { v4 as uuidv4, validate } from 'uuid';
+import * as uuid from 'uuid';
 import { StatusCodes } from 'http-status-codes';
 import userRepository from '../repositories/user.repository';
+const { OK, CREATED, NO_CONTENT } = StatusCodes;
+import UserNotFoundError from '../models/errors/UserNotFound.error.model';
+import InvalidIdError from '../models/errors/InvalidId.error.model';
+import MissingFieldsError from '../models/errors/MissingFields.error.model';
+import NoEffectError from '../models/errors/NoEffect.error.model';
 
-const { OK, CREATED, BAD_REQUEST, NOT_FOUND, NO_CONTENT } = StatusCodes;
 
-const users: User[] = [
-  {
-    id: "6c555d5b-f1e7-4312-beb3-3a802721df4b",
-    name: "Ricardo",
-    username: "rscamacho",
-    email: "rscamachodev@gmail.com"
-  },
-  {
-    id: "309c81e2-ddd8-4600-a361-aaa5784b7676",
-    name: "Jacinto",
-    username: "jacintinhopazeamor",
-    email: "jac-into-qa@teste.com"
-  },
-  {
-    id: "6def4083-380e-454e-b6d1-e855305bbc6d",
-    name: "Testenildo",
-    username: "tester",
-    email: "testador@teste.com"
-  }
-];
+export async function getAllUsersController(_request: Request, response: Response, next: NextFunction) {
+  try {
+    const users = await userRepository.findAllUsers();
+    if (!users.length)
+      throw new UserNotFoundError('No users found.');
 
-export function findUserById(request: Request, response: Response, next: NextFunction) {
-  const { id } = request.headers;
-
-  if (!id) {
-    request.user = undefined;
-    return next();
-  }
-  if (!validate(String(id))) {
-    return response.status(BAD_REQUEST).json({ error: 'Invalid ID.' });
-  }
-
-  const index = users.findIndex(user => user.id === id);
-
-  if (index > -1) {
-    request.user = { index, data: users[index] };
-  } else {
-    request.user = { index, data: undefined };
-  }
-
-  return next();
-}
-
-export function getUsersController(request: Request, response: Response) {
-  const { user } = request;
-
-  if (!user) {
-    return response.status(OK).json(users);
-  } else if (!user.data) {
-    return response.status(NOT_FOUND).json({ error: 'User ID not found.' });
-  } else if (!!user.data) {
-    return response.status(OK).json(user.data);
+    return response.status(200).json(users);
+  } catch (error) {
+    next(error);
   }
 }
 
-export async function createUserController(request: Request, response: Response) {
-  const { name, username, email, password } = request.body;
+export async function getUserByIdController(request: Request, response: Response, next: NextFunction) {
+  try {
+    const {id} = request.params;
+    if (!uuid.validate(String(id)))
+      throw new InvalidIdError();
 
-  if (!name || !username || !email || !password) {
-    return response.status(BAD_REQUEST).json({
-      error: 'Some field is missing.'
-    });
+    const user = await userRepository.findById(id);
+    if (!user)
+      throw new UserNotFoundError();
+
+    return response.status(OK).json(user);
+  } catch (error) {
+    next(error);
   }
-
-  const user: User = {
-    name,
-    username,
-    email,
-    password
-  }
-
-  const id = await userRepository.create(user);
-
-  return response.status(CREATED).json({ id });
 }
 
-export async function updateUserController(request: Request, response: Response) {
-  const id = String(request.headers.id);
-
-  if (!id) {
-    return response.status(BAD_REQUEST).json({ error: 'Enter user ID.' });
+export async function createUserController(request: Request, response: Response, next: NextFunction) {
+  try {
+    const { name, username, email, password } = request.body;
+    if (!name || !username || !email || !password)
+      throw new MissingFieldsError();
+  
+    const user: User = {
+      name,
+      username,
+      email,
+      password
+    }
+  
+    const id = await userRepository.create(user);
+  
+    return response.status(CREATED).json({ id });
+  } catch (error) {
+    next(error);
   }
-  if (!validate(String(id))) {
-    return response.status(BAD_REQUEST).json({ error: 'Invalid ID.' });
-  }
-
-  const user: { name?: string; username?: string; email?: string; password?: string } = request.body;
-  const { name, username, email, password } = user;
-
-  if (!name && !username && !email && !password) {
-    return response.status(BAD_REQUEST).json({
-      error: 'No fields entered.'
-    });
-  }
-
-  const userData = {
-    id,
-    ...!!name && ({ name }),
-    ...!!username && ({ username }),
-    ...!!email && ({ email }),
-    ...!!password && ({ password })
-  };
-
-  const rowsCount = await userRepository.update(userData);
-
-  if (rowsCount < 1) {
-    return response.status(BAD_REQUEST).json({
-      error: 'No rows affected in DB.'
-    });
-  }
-
-  return response.sendStatus(NO_CONTENT);
 }
 
-export async function deleteUserController(request: Request, response: Response) {
-  const id = String(request.headers.id);
-
-  if (!id) {
-    return response.status(BAD_REQUEST).json({ error: 'Enter user ID.' });
+export async function updateUserController(request: Request, response: Response, next: NextFunction) {
+  try {
+    const { id } = request.params;
+    if (!uuid.validate(String(id)))
+      throw new InvalidIdError();
+    
+    const { name, username, email, password } = request.body;
+    if (!name && !username && !email && !password)
+      throw new MissingFieldsError('Enter fields to update.');
+  
+    const userData = {
+      id,
+      ... !!name && ({ name }),
+      ... !!username && ({ username }),
+      ... !!email && ({ email }),
+      ... !!password && ({ password })
+    };
+  
+    const rowsCount = await userRepository.update(userData);
+    if (rowsCount < 1)
+      throw new NoEffectError();
+  
+    return response.sendStatus(NO_CONTENT);
+  } catch (error) {
+    next(error);
   }
-  if (!validate(String(id))) {
-    return response.status(BAD_REQUEST).json({ error: 'Invalid ID.' });
-  }
+}
 
-  const rowsCount = await userRepository.delete(id);
-
-  if (rowsCount < 1) {
-    return response.status(BAD_REQUEST).json({
-      error: 'No rows affected in DB.'
-    });
+export async function deleteUserController(request: Request, response: Response, next: NextFunction) {
+  try {
+    const {id} = request.params;
+    if (!uuid.validate(String(id)))
+      throw new InvalidIdError();
+  
+    const rowsCount = await userRepository.delete(id);
+    if (rowsCount < 1)
+      throw new NoEffectError();
+  
+    return response.sendStatus(NO_CONTENT);
+  } catch (error) {
+    next(error);
   }
-  if (rowsCount > 1) {
-    return response.status(BAD_REQUEST).json({
-      error: 'Something feels wrong. Multiple lines were affected by the operation.'
-    });
-  }
-
-  return response.sendStatus(NO_CONTENT);
 }

@@ -1,4 +1,7 @@
 import db from "../db";
+import dotenv from 'dotenv';
+dotenv.config();
+import DatabaseError from "../models/errors/Database.error.model";
 
 const tableName = 'application_user';
 
@@ -9,9 +12,12 @@ class UserRepository {
       FROM ${tableName};
     `;
 
-    const { rows } = await db.query<User>(queryString);
-
-    return rows || [];
+    try {
+      const { rows } = await db.query<User>(queryString);  
+      return rows || [];
+    } catch (error) {
+      throw new DatabaseError('User query error.');
+    }
   }
 
   async findById(id: string): Promise<User> {
@@ -20,16 +26,18 @@ class UserRepository {
       FROM ${tableName}
       WHERE id = $1 ;
     `;
-
-    const values = [id];
-
-    const { rows: [user] } = await db.query<User>(queryString, values);
-
-    return user;
+    
+    try {
+      const { rows: [user] } = await db.query<User>(queryString, [id]);
+      return user;
+    } catch (error) {
+      throw new DatabaseError('Error querying user by id.');
+    }
   }
 
   async create(user: User): Promise<string> {
     const { name, username, email, password } = user;
+    const values = [name, username, email, password, process.env.DB_CRYPT_SECRET];
 
     const queryString = `
       INSERT INTO ${tableName} 
@@ -38,11 +46,12 @@ class UserRepository {
       RETURNING id;
     `;
 
-    const values = [name, username, email, password, 'my_secret'];
-
-    const { rows: [{ id }] } = await db.query<{ id: string }>(queryString, values);
-
-    return id;
+    try {
+      const { rows: [{ id }] } = await db.query<{ id: string }>(queryString, values);
+      return id;
+    } catch (error) {
+      throw new DatabaseError('Error creating user.');
+    }
   }
 
   async update(user: { id: string; name?: string; username?: string; email?: string; password?: string }): Promise<number> {
@@ -62,9 +71,12 @@ class UserRepository {
         id = '${id}';
     `;
 
-    const { rowCount } = await db.query(queryString);
-
-    return rowCount;
+    try {
+      const { rowCount } = await db.query(queryString);
+      return rowCount;
+    } catch (error) {
+      throw new DatabaseError('User update error.');
+    }
   }
 
   async delete(id: string): Promise<number> {
@@ -73,9 +85,12 @@ class UserRepository {
       WHERE id = '${id}';
     `;
 
-    const { rowCount } = await db.query(queryString);
-
-    return rowCount;
+    try {
+      const { rowCount } = await db.query(queryString);
+      return rowCount;
+    } catch (error) {
+      throw new DatabaseError('Error removing user.');
+    }
   }
 }
 

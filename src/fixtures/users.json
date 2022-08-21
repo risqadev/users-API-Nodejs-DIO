@@ -1,0 +1,20 @@
+[
+  {
+    "id": "6c555d5b-f1e7-4312-beb3-3a802721df4b",
+    "name": "Ricardo",
+    "username": "rscamacho",
+    "email": "rscamachodev@gmail.com"
+  },
+  {
+    "id": "309c81e2-ddd8-4600-a361-aaa5784b7676",
+    "name": "Jacinto",
+    "username": "jacintinhopazeamor",
+    "email": "jac-into-qa@teste.com"
+  },
+  {
+    "id": "6def4083-380e-454e-b6d1-e855305bbc6d",
+    "name": "Testenildo",
+    "username": "tester",
+    "email": "testador@teste.com"
+  }
+]
